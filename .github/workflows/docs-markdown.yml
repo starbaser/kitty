@@ -54,11 +54,21 @@ jobs:
       - name: Build markdown docs
         run: make -C docs markdown
 
-      - name: Clone kitty-docs
+      - name: Set up SSH for kitty-docs push
         run: |
-          git clone \
-            https://x-access-token:${{ secrets.DOCS_PUSH_TOKEN }}@github.com/starbaser/kitty-docs.git \
-            /tmp/kitty-docs
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DOCS_DEPLOY_KEY }}" > ~/.ssh/kitty_docs_key
+          chmod 600 ~/.ssh/kitty_docs_key
+          cat >> ~/.ssh/config << 'EOF'
+          Host kitty-docs
+            HostName github.com
+            User git
+            IdentityFile ~/.ssh/kitty_docs_key
+            StrictHostKeyChecking no
+          EOF
+
+      - name: Clone kitty-docs
+        run: git clone kitty-docs:starbaser/kitty-docs.git /tmp/kitty-docs
 
       - name: Push built docs
         run: |
