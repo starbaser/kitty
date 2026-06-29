@@ -1,0 +1,83 @@
+name: Build Markdown Docs
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # Daily at 06:00 UTC
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    name: Build markdown docs and push to kitty-docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kitty source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --fix-missing \
+            libharfbuzz-dev \
+            libfontconfig-dev \
+            libpng-dev \
+            liblcms2-dev \
+            libxxhash-dev \
+            libsimde-dev \
+            libxkbcommon-dev \
+            libdbus-1-dev \
+            libcanberra-dev \
+            uuid-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r docs/requirements.txt
+          python -m pip install sphinx-markdown-builder
+
+      - name: Build kitty C extensions
+        run: python setup.py build --verbose
+
+      - name: Build markdown docs
+        run: make -C docs markdown
+
+      - name: Clone kitty-docs
+        run: |
+          git clone \
+            https://x-access-token:${{ secrets.DOCS_PUSH_TOKEN }}@github.com/starbaser/kitty-docs.git \
+            /tmp/kitty-docs
+
+      - name: Push built docs
+        run: |
+          cd /tmp/kitty-docs
+          # Remove everything except .git
+          find . -not -path './.git' -not -path './.git/*' -not -name '.git' -delete
+          # Copy markdown output
+          cp -r "$GITHUB_WORKSPACE"/docs/_build/markdown/markdown/* .
+          # Copy any assets (images, etc.) if they exist
+          if [ -d "$GITHUB_WORKSPACE"/docs/_build/markdown/_images ]; then
+            cp -r "$GITHUB_WORKSPACE"/docs/_build/markdown/_images .
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to docs — nothing to push"
+          else
+            git commit -m "Update docs — kitty@${GITHUB_SHA:0:12}"
+            git push origin main
+            echo "Docs pushed to kitty-docs"
+          fi

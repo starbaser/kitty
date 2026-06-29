@@ -51,6 +51,7 @@ in
           sphinx-copybutton
           sphinxext-opengraph
           sphinx-inline-tabs
+          sphinx-markdown-builder
         ]
         ++ optionals stdenv.isDarwin [
           imagemagick
