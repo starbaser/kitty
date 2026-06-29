@@ -59,6 +59,14 @@ jobs:
           python -m pip install -r docs/requirements.txt
           python -m pip install sphinx-markdown-builder
 
+      - name: Install Nerd Font Symbols
+        run: |
+          mkdir -p fonts
+          curl -sSL \
+            https://github.com/ryanoasis/nerd-fonts/releases/latest/download/NerdFontsSymbolsOnly.tar.xz \
+            | tar -xJ -C fonts
+          find fonts -name 'SymbolsNerdFontMono-Regular.ttf' -exec mv {} fonts/ \;
+
       - name: Build kitty C extensions
         run: python setup.py build --verbose
 
