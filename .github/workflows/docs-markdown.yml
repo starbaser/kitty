@@ -84,12 +84,15 @@ jobs:
           cd /tmp/kitty-docs
           # Remove everything except .git
           find . -not -path './.git' -not -path './.git/*' -not -name '.git' -delete
-          # Copy markdown output
-          cp -r "$GITHUB_WORKSPACE"/docs/_build/markdown/markdown/* .
-          # Copy any assets (images, etc.) if they exist
-          if [ -d "$GITHUB_WORKSPACE"/docs/_build/markdown/_images ]; then
-            cp -r "$GITHUB_WORKSPACE"/docs/_build/markdown/_images .
+          # Copy markdown output (handles both _build/markdown/ and _build/markdown/markdown/ layouts)
+          MD_SRC="$GITHUB_WORKSPACE/docs/_build/markdown"
+          if [ -d "$MD_SRC/markdown" ]; then
+            cp -r "$MD_SRC/markdown"/* .
+          else
+            find "$MD_SRC" -name '*.md' -exec cp {} . \;
           fi
+          # Copy any assets if they exist
+          find "$MD_SRC" -name '_images' -type d -exec cp -r {} . \; 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
